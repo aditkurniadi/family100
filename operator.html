@@ -246,15 +246,29 @@
           <!-- EXCEL IMPORT SECTION -->
           <div class="p-4 border border-yellow-500/20 bg-yellow-500/5 rounded-xl">
             <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
-              <h3 class="text-sm font-bold text-yellow-400 uppercase tracking-wider">Import Soal dari Excel (.xlsx / .csv)</h3>
-              <a href="/template_soal.csv" download="template_soal.csv" class="px-3 py-1 bg-yellow-500 hover:bg-yellow-600 text-slate-950 text-[10px] font-black rounded uppercase tracking-wider transition-all active:scale-95 shadow inline-flex items-center gap-1">
-                📥 Unduh Template CSV
+              <h3 class="text-sm font-bold text-yellow-400 uppercase tracking-wider">Import Soal dari Excel (.xlsx)</h3>
+              <a href="/template_soal.xlsx" download="template_soal.xlsx" class="px-3 py-1 bg-yellow-500 hover:bg-yellow-600 text-slate-950 text-[10px] font-black rounded uppercase tracking-wider transition-all active:scale-95 shadow inline-flex items-center gap-1">
+                📥 Unduh Template Excel
               </a>
             </div>
             <p class="text-xs text-slate-400 mb-4">
-              Pilih file Excel/CSV dengan susunan kolom: Kolom A (Kategori), Kolom B (Pertanyaan), Kolom C (Jawaban 1), Kolom D (Poin 1), dst.
+              Pilih file Excel (.xlsx) dengan susunan kolom: Kolom A (Kategori), Kolom B (Pertanyaan), Kolom C (Jawaban 1), Kolom D (Poin 1), dst.
             </p>
-            <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" onchange="handleExcelUpload(event)" class="block w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-yellow-500/20 file:text-yellow-400 hover:file:bg-yellow-500/30 cursor-pointer">
+            <input type="file" id="excelFileInput" accept=".xlsx, .xls" onchange="handleExcelUpload(event)" class="block w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-yellow-500/20 file:text-yellow-400 hover:file:bg-yellow-500/30 cursor-pointer">
+          </div>
+
+          <!-- GOOGLE SHEETS SYNC SECTION -->
+          <div class="p-4 border border-indigo-500/20 bg-indigo-500/5 rounded-xl">
+            <h3 class="text-sm font-bold text-indigo-400 uppercase tracking-wider mb-2">Sinkronisasi Google Sheets</h3>
+            <p class="text-[11px] text-slate-400 mb-4">
+              Publikasikan Google Sheets ke web (Format: **CSV**) lalu tempel URL CSV di bawah. Kolom: Kategori, Pertanyaan, Jwb 1, Poin 1, dst.
+            </p>
+            <div class="flex gap-2">
+              <input type="text" id="gSheetUrlInput" placeholder="Masukkan URL Google Sheets CSV..." class="flex-grow bg-slate-900 border border-slate-800 rounded p-2 text-xs text-white focus:outline-none focus:border-indigo-500">
+              <button onclick="syncGoogleSheets()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-lg uppercase tracking-wider transition-all active:scale-95 shadow inline-flex items-center gap-1">
+                🔄 Sinkronkan
+              </button>
+            </div>
           </div>
 
           <!-- ADD QUESTION FORM -->
@@ -536,6 +550,11 @@
         }
       } else {
         initializeDefaultState();
+      }
+      
+      const savedGSheet = localStorage.getItem('family100_gsheet_url');
+      if (savedGSheet && document.getElementById('gSheetUrlInput')) {
+        document.getElementById('gSheetUrlInput').value = savedGSheet;
       }
     }
 
@@ -1271,6 +1290,147 @@
         saveStateAndEmit();
         renderAll();
       }
+    }
+
+    // Robust CSV parser helper
+    function parseCSV(text) {
+      const lines = [];
+      let row = [""];
+      let inQuotes = false;
+
+      for (let i = 0; i < text.length; i++) {
+        const c = text[i];
+        const next = text[i+1];
+        
+        if (c === '"') {
+          if (inQuotes && next === '"') {
+            row[row.length - 1] += '"';
+            i++;
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if (c === ',' && !inQuotes) {
+          row.push('');
+        } else if ((c === '\r' || c === '\n') && !inQuotes) {
+          if (c === '\r' && next === '\n') {
+            i++;
+          }
+          lines.push(row);
+          row = [''];
+        } else {
+          row[row.length - 1] += c;
+        }
+      }
+      if (row.length > 1 || row[0] !== '') {
+        lines.push(row);
+      }
+      return lines;
+    }
+
+    // Google Sheets CSV Sync Function
+    function syncGoogleSheets() {
+      const urlInput = document.getElementById('gSheetUrlInput');
+      if (!urlInput) return;
+      
+      const url = urlInput.value.trim();
+      if (!url) {
+        alert("Masukkan URL Google Sheets CSV terlebih dahulu!");
+        return;
+      }
+
+      if (!url.startsWith("http://") && !url.startsWith("https://")) {
+        alert("URL tidak valid! Pastikan dimulai dengan http:// atau https://");
+        return;
+      }
+
+      if (!url.includes("pubhtml") && !url.includes("pub") && !url.includes("output=csv")) {
+        alert("Peringatan: URL tampaknya bukan link 'Publish to Web' CSV. Pastikan Anda memilih format CSV saat Publish.");
+      }
+
+      // Save URL locally
+      localStorage.setItem('family100_gsheet_url', url);
+
+      // Fetch the CSV data
+      fetch(url)
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+          }
+          return response.text();
+        })
+        .then(csvText => {
+          const rows = parseCSV(csvText);
+          const newQuestions = [];
+          
+          let startIdx = 0;
+          if (rows.length > 0) {
+            const row0 = rows[0];
+            const isHeader = isNaN(Number(row0[2])) || 
+                             String(row0[0]).toLowerCase().includes('kategori') ||
+                             String(row0[1]).toLowerCase().includes('pertanyaan') || 
+                             String(row0[2]).toLowerCase().includes('jawaban');
+            if (isHeader) {
+              startIdx = 1;
+            }
+          }
+
+          for (let i = startIdx; i < rows.length; i++) {
+            const row = rows[i];
+            if (!row || !row[0] || !row[1]) continue;
+            
+            const categoryText = row[0].toString().toUpperCase().trim();
+            const questionText = row[1].toString().trim();
+            const answers = [];
+            
+            for (let col = 2; col < row.length; col += 2) {
+              const answerText = row[col];
+              const pointsVal = row[col + 1];
+              
+              if (answerText && pointsVal !== undefined) {
+                const points = parseInt(pointsVal, 10);
+                if (!isNaN(points)) {
+                  answers.push({
+                    text: answerText.toString().toUpperCase().trim(),
+                    points: points
+                  });
+                }
+              }
+            }
+            
+            if (answers.length > 0) {
+              answers.sort((a, b) => b.points - a.points);
+              newQuestions.push({
+                category: categoryText || "UMUM",
+                question: questionText,
+                answers: answers
+              });
+            }
+          }
+
+          if (newQuestions.length === 0) {
+            alert("Format data Google Sheets tidak valid atau kosong!");
+            return;
+          }
+
+          const choice = confirm(`Berhasil menarik ${newQuestions.length} soal dari Google Sheets.\n\nGanti total bank soal saat ini?`);
+          
+          if (choice) {
+            state.questions = newQuestions;
+            state.currentQuestionIndex = 0;
+            state.openedAnswers = [];
+            state.wrongCount = 0;
+          } else {
+            state.questions = state.questions.concat(newQuestions);
+          }
+          
+          saveStateAndEmit();
+          renderAll();
+          alert("Soal berhasil disinkronkan!");
+        })
+        .catch(error => {
+          console.error(error);
+          alert("Gagal mengambil data dari Google Sheets. Pastikan link sudah di-publish ke web dalam format CSV dan dapat diakses publik.");
+        });
     }
 
     // EXCEL IMPORT
