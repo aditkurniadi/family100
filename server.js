@@ -2,12 +2,14 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
 const PORT = process.env.PORT || 8000;
+const QUESTIONS_FILE = path.join(__dirname, 'questions.json');
 
 // Serve static files from the current directory
 app.use(express.static(__dirname));
@@ -20,6 +22,7 @@ app.get('/', (req, res) => {
 // DEFAULT QUESTIONS FOR INITIAL GAME STATE
 const defaultQuestions = [
   {
+    category: "UMUM",
     question: "Sebutkan makanan khas Indonesia yang sangat populer!",
     answers: [
       { text: "NASI GORENG", points: 42 },
@@ -30,6 +33,7 @@ const defaultQuestions = [
     ]
   },
   {
+    category: "UMUM",
     question: "Sebutkan perlengkapan sekolah yang wajib dibawa siswa!",
     answers: [
       { text: "BUKU TULIS", points: 40 },
@@ -40,6 +44,7 @@ const defaultQuestions = [
     ]
   },
   {
+    category: "UMUM",
     question: "Benda apa di dalam rumah yang sering digunakan untuk bercermin?",
     answers: [
       { text: "CERMIN / KACA", points: 85 },
@@ -48,6 +53,7 @@ const defaultQuestions = [
     ]
   },
   {
+    category: "UMUM",
     question: "Sebutkan hewan berkaki empat yang memiliki leher sangat panjang!",
     answers: [
       { text: "JERAPAH", points: 95 },
@@ -56,11 +62,31 @@ const defaultQuestions = [
   }
 ];
 
+function loadQuestionsFromFile() {
+  if (fs.existsSync(QUESTIONS_FILE)) {
+    try {
+      const raw = fs.readFileSync(QUESTIONS_FILE, 'utf8');
+      return JSON.parse(raw);
+    } catch (e) {
+      console.error("Error reading questions.json, using defaults:", e);
+      return defaultQuestions;
+    }
+  } else {
+    try {
+      fs.writeFileSync(QUESTIONS_FILE, JSON.stringify(defaultQuestions, null, 2), 'utf8');
+      return defaultQuestions;
+    } catch (e) {
+      console.error("Error writing default questions.json:", e);
+      return defaultQuestions;
+    }
+  }
+}
+
 const OPERATOR_PASSWORD = "trpl2025";
 
 // Server-side game state
 let gameState = {
-  questions: defaultQuestions,
+  questions: loadQuestionsFromFile(),
   scores: [0, 0, 0, 0, 0],
   currentQuestionIndex: 0,
   openedAnswers: [],
@@ -133,6 +159,14 @@ io.on('connection', (socket) => {
       if (!gameState.roomPin) {
         gameState.roomPin = "1234";
       }
+      
+      // Persist questions to JSON file
+      try {
+        fs.writeFileSync(QUESTIONS_FILE, JSON.stringify(gameState.questions || [], null, 2), 'utf8');
+      } catch (e) {
+        console.error("Failed to write questions to file:", e);
+      }
+
       // Broadcast state update to everyone else
       socket.broadcast.emit('sync_state', gameState);
     }

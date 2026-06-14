@@ -331,6 +331,9 @@
       <p class="text-lg font-bold tracking-widest text-yellow-400 uppercase animate-pulse mt-4">
         GAME MULAI DALAM...
       </p>
+      <p id="countdownCategoryInfo" class="text-sm font-semibold tracking-widest text-slate-400 uppercase mt-2">
+        KATEGORI: -
+      </p>
     </div>
   </div>
 
@@ -538,6 +541,14 @@
 
         // Jika transisi soal, kita sembunyikan board dulu dan tampilkan countdown screen
         countdownScreen.classList.remove('hidden');
+
+        // Set dynamic category info
+        const currentQ = state.questions && state.questions[state.currentQuestionIndex];
+        const currentCategory = currentQ ? (currentQ.category || "UMUM") : "UMUM";
+        const catInfoEl = document.getElementById('countdownCategoryInfo');
+        if (catInfoEl) {
+          catInfoEl.innerText = `KATEGORI: ${currentCategory}`;
+        }
 
         let count = 3;
         countdownNum.innerText = count;

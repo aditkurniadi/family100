@@ -1,0 +1,86 @@
+[
+  {
+    "category": "UMUM",
+    "question": "Sebutkan makanan khas Indonesia yang sangat populer!",
+    "answers": [
+      {
+        "text": "NASI GORENG",
+        "points": 42
+      },
+      {
+        "text": "RENDANG",
+        "points": 28
+      },
+      {
+        "text": "SATE",
+        "points": 15
+      },
+      {
+        "text": "BAKSO",
+        "points": 9
+      },
+      {
+        "text": "GADO-GADO",
+        "points": 6
+      }
+    ]
+  },
+  {
+    "category": "UMUM",
+    "question": "Sebutkan perlengkapan sekolah yang wajib dibawa siswa!",
+    "answers": [
+      {
+        "text": "BUKU TULIS",
+        "points": 40
+      },
+      {
+        "text": "PULPEN / PENSIL",
+        "points": 30
+      },
+      {
+        "text": "TAS SEKOLAH",
+        "points": 18
+      },
+      {
+        "text": "PENGHAPUS",
+        "points": 7
+      },
+      {
+        "text": "PENGGARIS",
+        "points": 5
+      }
+    ]
+  },
+  {
+    "category": "UMUM",
+    "question": "Benda apa di dalam rumah yang sering digunakan untuk bercermin?",
+    "answers": [
+      {
+        "text": "CERMIN / KACA",
+        "points": 85
+      },
+      {
+        "text": "LEMARI ES (PINTU KACA)",
+        "points": 10
+      },
+      {
+        "text": "HP / SCREEN HP",
+        "points": 5
+      }
+    ]
+  },
+  {
+    "category": "UMUM",
+    "question": "Sebutkan hewan berkaki empat yang memiliki leher sangat panjang!",
+    "answers": [
+      {
+        "text": "JERAPAH",
+        "points": 95
+      },
+      {
+        "text": "UNTA",
+        "points": 5
+      }
+    ]
+  }
+]

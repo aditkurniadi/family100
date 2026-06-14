@@ -171,11 +171,19 @@
             </h2>
             <p class="text-xs text-slate-400">Gunakan kontrol di bawah untuk memandu game.</p>
           </div>
-          <div class="flex items-center gap-2">
-            <label for="questionSelect" class="text-xs text-slate-400 font-semibold">Pilih Soal:</label>
-            <select id="questionSelect" onchange="changeQuestion(this.value)" class="bg-slate-950 border border-slate-800 text-yellow-400 text-sm rounded-lg focus:ring-yellow-500 focus:border-yellow-500 p-2 font-semibold">
-              <!-- Options loaded dynamically -->
-            </select>
+          <div class="flex flex-wrap items-center gap-4">
+            <div class="flex items-center gap-2">
+              <label for="categoryFilter" class="text-xs text-slate-400 font-semibold">Filter Kategori:</label>
+              <select id="categoryFilter" onchange="filterQuestionsByCategory()" class="bg-slate-950 border border-slate-800 text-yellow-400 text-sm rounded-lg p-2 font-semibold focus:ring-yellow-500 focus:border-yellow-500">
+                <option value="ALL">Semua Kategori</option>
+              </select>
+            </div>
+            <div class="flex items-center gap-2">
+              <label for="questionSelect" class="text-xs text-slate-400 font-semibold">Pilih Soal:</label>
+              <select id="questionSelect" onchange="changeQuestion(this.value)" class="bg-slate-950 border border-slate-800 text-yellow-400 text-sm rounded-lg p-2 font-semibold focus:ring-yellow-500 focus:border-yellow-500">
+                <!-- Options loaded dynamically -->
+              </select>
+            </div>
           </div>
         </div>
 
@@ -250,9 +258,15 @@
             <form id="questionForm" onsubmit="saveNewQuestion(event)" class="space-y-4">
               <input type="hidden" id="editQuestionIndex" value="">
               
-              <div>
-                <label for="formQuestionText" class="block text-xs text-slate-400 uppercase mb-1 font-semibold">Pertanyaan</label>
-                <input type="text" id="formQuestionText" required placeholder="Contoh: Apa buah yang rasanya manis?" class="w-full bg-slate-900 border border-slate-800 rounded p-2 text-sm text-white focus:outline-none focus:border-yellow-500">
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="md:col-span-2">
+                  <label for="formQuestionText" class="block text-xs text-slate-400 uppercase mb-1 font-semibold">Pertanyaan</label>
+                  <input type="text" id="formQuestionText" required placeholder="Contoh: Apa buah yang rasanya manis?" class="w-full bg-slate-900 border border-slate-800 rounded p-2 text-sm text-white focus:outline-none focus:border-yellow-500">
+                </div>
+                <div>
+                  <label for="formQuestionCategory" class="block text-xs text-slate-400 uppercase mb-1 font-semibold">Kategori Soal</label>
+                  <input type="text" id="formQuestionCategory" required placeholder="Contoh: PROGRAMMER, KAMPUS, UMUM" class="w-full bg-slate-900 border border-slate-800 rounded p-2 text-sm text-yellow-400 focus:outline-none focus:border-yellow-500 uppercase">
+                </div>
               </div>
               
               <div class="grid grid-cols-2 gap-4">
@@ -743,8 +757,39 @@
       renderScores();
     }
 
-    function renderQuestionSelector() {
+    let selectedCategoryFilter = "ALL";
+
+    function filterQuestionsByCategory() {
+      const filterVal = document.getElementById('categoryFilter').value;
+      selectedCategoryFilter = filterVal;
+      renderQuestionSelector(true); // pass true to trigger auto-select first matching question
+    }
+
+    function renderQuestionSelector(triggerAutoSelect = false) {
       const select = document.getElementById('questionSelect');
+      const filterSelect = document.getElementById('categoryFilter');
+      if (!select || !filterSelect) return;
+      
+      // Collect unique categories
+      const categories = new Set();
+      if (state.questions) {
+        state.questions.forEach(q => {
+          if (q.category) {
+            categories.add(q.category.toUpperCase().trim());
+          }
+        });
+      }
+      
+      // Repopulate Category Filter
+      filterSelect.innerHTML = '<option value="ALL">Semua Kategori</option>';
+      categories.forEach(cat => {
+        const opt = document.createElement('option');
+        opt.value = cat;
+        opt.text = cat;
+        opt.selected = cat === selectedCategoryFilter;
+        filterSelect.appendChild(opt);
+      });
+      
       select.innerHTML = '';
       
       if (!state.questions || state.questions.length === 0) {
@@ -754,13 +799,34 @@
         return;
       }
 
+      // Filter questions to display
+      let displayedCount = 0;
+      let firstMatchIdx = null;
+
       state.questions.forEach((q, idx) => {
-        const opt = document.createElement('option');
-        opt.value = idx;
-        opt.selected = state.currentQuestionIndex === idx;
-        opt.text = `Soal ${idx + 1}: ${q.question.substring(0, 30)}...`;
-        select.appendChild(opt);
+        const qCategory = (q.category || "UMUM").toUpperCase().trim();
+        const matchesFilter = selectedCategoryFilter === "ALL" || qCategory === selectedCategoryFilter;
+        
+        if (matchesFilter) {
+          if (firstMatchIdx === null) {
+            firstMatchIdx = idx;
+          }
+          const opt = document.createElement('option');
+          opt.value = idx;
+          opt.selected = state.currentQuestionIndex === idx;
+          opt.text = `Soal ${idx + 1} [${qCategory}]: ${q.question.substring(0, 30)}...`;
+          select.appendChild(opt);
+          displayedCount++;
+        }
       });
+
+      if (displayedCount === 0) {
+        const opt = document.createElement('option');
+        opt.text = "Tidak Ada Soal Kategori Ini";
+        select.appendChild(opt);
+      } else if (triggerAutoSelect && firstMatchIdx !== null && state.currentQuestionIndex !== firstMatchIdx) {
+        changeQuestion(firstMatchIdx);
+      }
     }
 
     function renderActiveQuestion() {
@@ -1083,6 +1149,7 @@
         item.innerHTML = `
           <div class="flex-grow pr-4">
             <span class="font-bold text-yellow-400 mr-2">${idx + 1}.</span>
+            <span class="px-2 py-0.5 rounded text-[9px] font-extrabold uppercase bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 mr-2">${q.category || 'UMUM'}</span>
             <span class="font-medium text-slate-200">${q.question}</span>
             <div class="text-[10px] text-slate-400 mt-1">${q.answers.map(a => `${a.text} (${a.points})`).join(', ')}</div>
           </div>
@@ -1101,6 +1168,7 @@
 
       document.getElementById('editQuestionIndex').value = idx;
       document.getElementById('formQuestionText').value = q.question;
+      document.getElementById('formQuestionCategory').value = q.category || 'UMUM';
       
       for (let i = 1; i <= 6; i++) {
         document.getElementById(`ans${i}`).value = '';
@@ -1136,6 +1204,7 @@
     function clearForm() {
       document.getElementById('editQuestionIndex').value = '';
       document.getElementById('formQuestionText').value = '';
+      document.getElementById('formQuestionCategory').value = 'UMUM';
       for (let i = 1; i <= 6; i++) {
         document.getElementById(`ans${i}`).value = '';
         document.getElementById(`pts${i}`).value = '';
@@ -1147,6 +1216,7 @@
       e.preventDefault();
       
       const qText = document.getElementById('formQuestionText').value.trim();
+      const qCat = document.getElementById('formQuestionCategory').value.trim().toUpperCase() || "UMUM";
       const answers = [];
 
       for (let i = 1; i <= 6; i++) {
@@ -1169,6 +1239,7 @@
       answers.sort((a, b) => b.points - a.points);
 
       const newQ = {
+        category: qCat,
         question: qText,
         answers: answers
       };
@@ -1217,8 +1288,9 @@
           if (rows.length > 0) {
             const row0 = rows[0];
             const isHeader = isNaN(Number(row0[2])) || 
-                             String(row0[0]).toLowerCase().includes('pertanyaan') || 
-                             String(row0[1]).toLowerCase().includes('jawaban');
+                             String(row0[0]).toLowerCase().includes('kategori') ||
+                             String(row0[1]).toLowerCase().includes('pertanyaan') || 
+                             String(row0[2]).toLowerCase().includes('jawaban');
             if (isHeader) {
               startIdx = 1;
             }
@@ -1226,12 +1298,13 @@
 
           for (let i = startIdx; i < rows.length; i++) {
             const row = rows[i];
-            if (!row || !row[0]) continue;
+            if (!row || !row[0] || !row[1]) continue;
             
-            const questionText = row[0].toString().trim();
+            const categoryText = row[0].toString().toUpperCase().trim();
+            const questionText = row[1].toString().trim();
             const answers = [];
             
-            for (let col = 1; col < row.length; col += 2) {
+            for (let col = 2; col < row.length; col += 2) {
               const answerText = row[col];
               const pointsVal = row[col + 1];
               
@@ -1249,6 +1322,7 @@
             if (answers.length > 0) {
               answers.sort((a, b) => b.points - a.points);
               newQuestions.push({
+                category: categoryText || "UMUM",
                 question: questionText,
                 answers: answers
               });
