@@ -110,6 +110,14 @@
           Tekan tombol <span class="bg-slate-800 px-2 py-0.5 rounded text-yellow-400 font-bold">1</span> - <span class="bg-slate-800 px-2 py-0.5 rounded text-yellow-400 font-bold">5</span> di keyboard ATAU minta kelompok menekan Buzzer di HP mereka.
         </p>
         
+        <!-- MANUAL BUZZER BUTTONS FOR TOUCH DEVICES (IPAD) -->
+        <div class="mb-4">
+          <label class="block text-[11px] font-semibold text-slate-400 mb-2 uppercase tracking-wider">Tombol Rebutan (Buzzer Manual / iPad)</label>
+          <div class="grid grid-cols-5 gap-2" id="operatorBuzzerCards">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+
         <!-- ROOM PIN CONFIGURATION -->
         <div class="mb-4 bg-slate-950/60 p-3 rounded-xl border border-slate-800">
           <label for="roomPinInput" class="block text-xs font-semibold text-slate-400 mb-1 uppercase tracking-wider">PIN Ruangan (Buzzer HP)</label>
@@ -938,6 +946,33 @@
           ${buttonsHTML}
         </div>
       `;
+
+      // Render the 5 manual cards for iPad / touch screen
+      const cardsContainer = document.getElementById('operatorBuzzerCards');
+      if (cardsContainer) {
+        cardsContainer.innerHTML = '';
+        for (let i = 1; i <= 5; i++) {
+          const btn = document.createElement('button');
+          btn.onclick = () => triggerBuzzerKeyboard(i);
+          
+          let btnClass = "py-3 text-xs font-black rounded-lg transition-all active:scale-95 border ";
+          
+          if (state.buzzerState === 'BUZZED' && state.buzzerGroup === i) {
+            // Flashing active buzzed group
+            btnClass += "bg-emerald-500 text-slate-950 border-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.6)] animate-pulse";
+          } else if (state.activeGroupIndex === (i - 1)) {
+            // Selected active group
+            btnClass += "bg-yellow-500/20 text-yellow-400 border-yellow-500/50";
+          } else {
+            // Inactive
+            btnClass += "bg-slate-950 hover:bg-slate-900 text-slate-300 border-slate-800";
+          }
+          
+          btn.className = btnClass;
+          btn.innerHTML = `KLP ${i}`;
+          cardsContainer.appendChild(btn);
+        }
+      }
     }
 
     function changeQuestion(idxVal) {
