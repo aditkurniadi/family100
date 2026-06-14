@@ -245,11 +245,16 @@
           
           <!-- EXCEL IMPORT SECTION -->
           <div class="p-4 border border-yellow-500/20 bg-yellow-500/5 rounded-xl">
-            <h3 class="text-sm font-bold text-yellow-400 uppercase tracking-wider mb-2">Import Soal dari Excel (.xlsx)</h3>
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+              <h3 class="text-sm font-bold text-yellow-400 uppercase tracking-wider">Import Soal dari Excel (.xlsx / .csv)</h3>
+              <a href="/template_soal.csv" download="template_soal.csv" class="px-3 py-1 bg-yellow-500 hover:bg-yellow-600 text-slate-950 text-[10px] font-black rounded uppercase tracking-wider transition-all active:scale-95 shadow inline-flex items-center gap-1">
+                📥 Unduh Template CSV
+              </a>
+            </div>
             <p class="text-xs text-slate-400 mb-4">
-              Pilih file excel dengan susunan baris: Kolom A (Pertanyaan), Kolom B (Jawaban 1), Kolom C (Poin 1), Kolom D (Jawaban 2), dst.
+              Pilih file Excel/CSV dengan susunan kolom: Kolom A (Kategori), Kolom B (Pertanyaan), Kolom C (Jawaban 1), Kolom D (Poin 1), dst.
             </p>
-            <input type="file" id="excelFileInput" accept=".xlsx, .xls" onchange="handleExcelUpload(event)" class="block w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-yellow-500/20 file:text-yellow-400 hover:file:bg-yellow-500/30 cursor-pointer">
+            <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" onchange="handleExcelUpload(event)" class="block w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-yellow-500/20 file:text-yellow-400 hover:file:bg-yellow-500/30 cursor-pointer">
           </div>
 
           <!-- ADD QUESTION FORM -->
