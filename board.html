@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Board Utama - Family 100 Dies Natalis</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&family=Rajdhani:wght@600;700;800&display=swap"
+    rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Outfit', sans-serif;
+    }
+
+    .font-cyber {
+      font-family: 'Rajdhani', sans-serif;
+    }
+
+    /* FLIP CARD STYLING */
+    .flip-card {
+      perspective: 1000px;
+    }
+
+    .flip-card-inner {
+      width: 100%;
+      height: 100%;
+      transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      transform-style: preserve-3d;
+    }
+
+    .flip-card.flipped .flip-card-inner {
+      transform: rotateY(180deg) scale(1.05);
+      box-shadow: 0 0 30px rgba(250, 204, 21, 0.6);
+      border-radius: 1rem;
+    }
+
+    .flip-card-front,
+    .flip-card-back {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      -webkit-backface-visibility: hidden;
+      backface-visibility: hidden;
+    }
+
+    .flip-card-back {
+      transform: rotateY(180deg);
+    }
+
+    /* NEON GLOWS */
+    .neon-gold-border {
+      border-color: rgba(250, 204, 21, 0.6);
+      box-shadow: 0 0 20px rgba(250, 204, 21, 0.3);
+    }
+
+    .neon-gold-glow-active {
+      border-color: rgba(250, 204, 21, 1);
+      box-shadow: 0 0 30px rgba(250, 204, 21, 0.7);
+    }
+
+    .neon-red-glow {
+      box-shadow: 0 0 25px rgba(239, 68, 68, 0.8);
+    }
+
+    /* STARDUST ANIMATION */
+    .stardust-particle {
+      position: absolute;
+      background: radial-gradient(circle, rgba(250, 204, 21, 1) 0%, rgba(253, 186, 116, 0) 70%);
+      border-radius: 50%;
+      pointer-events: none;
+      animation: float-particle 15s linear infinite;
+    }
+
+    @keyframes float-particle {
+      0% {
+        transform: translateY(100vh) translateX(0) scale(0.2);
+        opacity: 0;
+      }
+
+      10% {
+        opacity: 0.8;
+      }
+
+      90% {
+        opacity: 0.8;
+      }
+
+      100% {
+        transform: translateY(-10vh) translateX(var(--drift-x, 50px)) scale(1.2);
+        opacity: 0;
+      }
+    }
+
+    /* COUNTDOWN POP ANIMATION */
+    .countdown-pop {
+      animation: pop-number 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+
+    @keyframes pop-number {
+      0% {
+        transform: scale(0.3);
+        opacity: 0;
+      }
+
+      50% {
+        transform: scale(1.1);
+        opacity: 1;
+      }
+
+      100% {
+        transform: scale(1.0);
+        opacity: 1;
+      }
+    }
+  </style>
+</head>
+
+<body
+  class="bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 text-white min-h-screen flex flex-col justify-between overflow-hidden select-none">
+
+  <!-- AUDIO UNLOCK STRIP -->
+  <div id="audioUnlockBanner" onclick="unlockAudio()"
+    class="bg-yellow-500 text-slate-950 text-center py-2 px-4 text-sm font-bold cursor-pointer hover:bg-yellow-400 active:scale-99 transition-all z-50">
+    🔊 Suara belum diaktifkan oleh browser. Klik di mana saja pada layar ini untuk mengaktifkan Efek Suara (Audio)!
+  </div>
+
+  <!-- HEADER AREA (QUESTION & STRIKES) -->
+  <header
+    class="w-full px-12 py-6 flex justify-between items-center bg-slate-950/40 border-b border-slate-900/60 backdrop-blur-sm">
+    <div class="flex flex-col">
+      <h1 class="text-2xl font-black font-cyber text-yellow-400 tracking-widest uppercase">
+        FAMILY 100 DIES NATALIS
+      </h1>
+      <p class="text-xs text-slate-400 tracking-wider">TEKNOLOGI REKAYASA PERANGKAT LUNAK (TRPL)</p>
+    </div>
+
+    <!-- STRIKES (X) -->
+    <div class="flex items-center gap-3">
+      <span class="text-sm font-bold text-slate-400 uppercase tracking-widest mr-2">Strikes:</span>
+      <div id="strikeIndicator1"
+        class="w-10 h-10 rounded border border-slate-800 flex items-center justify-center font-black text-xl text-slate-700 transition-all duration-300">
+        X</div>
+      <div id="strikeIndicator2"
+        class="w-10 h-10 rounded border border-slate-800 flex items-center justify-center font-black text-xl text-slate-700 transition-all duration-300">
+        X</div>
+      <div id="strikeIndicator3"
+        class="w-10 h-10 rounded border border-slate-800 flex items-center justify-center font-black text-xl text-slate-700 transition-all duration-300">
+        X</div>
+    </div>
+  </header>
+
+  <!-- QUESTION & BOARD GRID CONTAINER -->
+  <main class="flex-grow flex flex-col items-center justify-center px-12 py-6 max-w-6xl mx-auto w-full gap-8">
+
+    <!-- QUESTION TEXT DISPLAYER -->
+    <div
+      class="w-full bg-slate-900/50 border border-slate-800/80 rounded-2xl p-6 text-center shadow-lg shadow-black/30">
+      <p id="boardQuestionText" class="text-2xl lg:text-3xl font-extrabold text-white leading-relaxed tracking-wide">
+        Menunggu Operator Memulai Game...
+      </p>
+    </div>
+
+    <!-- ANSWER CARDS GRID (MAX 6 ITEMS) -->
+    <div id="answersGrid" class="w-full grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl">
+      <!-- Cards dynamically generated -->
+    </div>
+
+  </main>
+
+  <!-- FOOTER TEAM SCOREBOARD -->
+  <footer class="w-full px-12 py-8 bg-slate-950/60 border-t border-slate-900/60 backdrop-blur-sm">
+    <div id="teamScoresBoard" class="grid grid-cols-5 gap-6 max-w-6xl mx-auto">
+      <!-- 5 Groups loaded dynamically -->
+    </div>
+  </footer>
+
+  <!-- ================= OVERLAYS ================= -->
+
+  <!-- 1. BUZZER INTERACTION OVERLAY (3 SECONDS) -->
+  <div id="buzzerOverlay"
+    class="hidden fixed inset-0 z-50 bg-slate-950/95 flex flex-col items-center justify-center transition-all duration-300">
+    <div
+      class="text-center p-8 rounded-3xl border-4 border-yellow-400 bg-slate-900/80 neon-gold-glow-active animate-bounce max-w-lg w-full mx-4">
+      <div class="text-yellow-400 text-6xl mb-4">🚨</div>
+      <h2 id="buzzerOverlayText"
+        class="text-4xl md:text-5xl font-black font-cyber text-yellow-400 tracking-wider uppercase leading-snug">
+        KELOMPOK 1 MENJAWAB!
+      </h2>
+      <p class="text-slate-400 text-sm mt-4 tracking-widest uppercase animate-pulse">Waktu Menjawab: 3 Detik</p>
+    </div>
+  </div>
+
+  <!-- 2. WRONG STRIKE (X) OVERLAY (2 SECONDS) -->
+  <div id="wrongOverlay"
+    class="hidden fixed inset-0 z-50 bg-slate-950/90 flex items-center justify-center gap-8 md:gap-16 transition-all duration-300">
+    <div id="wrongXContainer" class="flex gap-8 md:gap-16 transform scale-75 md:scale-100">
+      <!-- Dynamically filled with X marks -->
+    </div>
+  </div>
+
+  <!-- 3. BUMPER LOOP SCREEN (OVERLAY) -->
+  <div id="bumperOverlayScreen"
+    class="fixed inset-0 z-40 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 flex flex-col items-center justify-center overflow-hidden transition-all duration-500">
+    <!-- Looping stardust/particle container -->
+    <div id="bumperStardust" class="absolute inset-0 pointer-events-none"></div>
+
+    <!-- Content container -->
+    <div class="relative z-10 text-center flex flex-col items-center justify-center p-6 select-none">
+      <!-- Outer glow elements -->
+      <div
+        class="w-48 h-48 rounded-full border-4 border-yellow-500/20 absolute -z-10 animate-[ping_4s_linear_infinite] flex items-center justify-center">
+        <div class="w-36 h-36 rounded-full border-2 border-yellow-400/40 animate-[ping_2s_linear_infinite]"></div>
+      </div>
+
+      <!-- Logo Dies Natalis TRPL Animasi -->
+      <div class="relative z-10 mb-6 flex items-center justify-center animate-[pulse_3s_ease-in-out_infinite]">
+        <!-- Outer Glowing Ring -->
+        <div class="absolute w-44 h-44 rounded-full bg-blue-500/10 border border-blue-400/20 blur-sm animate-[ping_4s_linear_infinite]"></div>
+        
+        <!-- Main Logo Image -->
+        <img src="logo_dies.png" alt="Logo Dies Natalis TRPL" class="w-40 h-40 object-contain drop-shadow-[0_0_25px_rgba(56,189,248,0.6)] animate-[bounce_4s_infinite]">
+      </div>
+
+      <h1
+        class="text-6xl md:text-7xl font-black font-cyber text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-amber-300 to-yellow-500 tracking-wider uppercase drop-shadow-[0_5px_15px_rgba(250,204,21,0.4)] animate-[pulse_3s_ease-in-out_infinite]">
+        FAMILY 100
+      </h1>
+      <p
+        class="text-sm md:text-md font-bold tracking-widest text-slate-300 uppercase mt-4 max-w-md bg-slate-950/60 px-6 py-2 rounded-full border border-yellow-500/30 shadow-lg backdrop-blur-md">
+        DIES NATALIS TRPL 2026
+      </p>
+
+      <!-- Subtext loading/intro -->
+      <p class="text-xs text-yellow-400/70 font-semibold tracking-wider uppercase mt-8 animate-pulse">
+        Menunggu game dimulai &bull; Bersiaplah!
+      </p>
+    </div>
+  </div>
+
+  <!-- 4. PENDING / PAUSE LOOP SCREEN (OVERLAY) -->
+  <div id="pendingOverlayScreen"
+    class="fixed inset-0 z-40 bg-slate-950/95 flex flex-col items-center justify-center overflow-hidden transition-all duration-500 hidden">
+    <!-- Cyberpunk grid/strobe lines overlay -->
+    <div
+      class="absolute inset-0 bg-[linear-gradient(to_right,rgba(239,68,68,0.05)_1px,transparent_1px),linear-gradient(to_bottom,rgba(239,68,68,0.05)_1px,transparent_1px)] bg-[size:40px_40px]">
+    </div>
+
+    <!-- Pulsing red warning glow -->
+    <div class="absolute w-[500px] h-[500px] bg-red-600/10 rounded-full filter blur-[120px] animate-pulse"></div>
+
+    <div class="relative z-10 text-center flex flex-col items-center justify-center p-6">
+      <div
+        class="w-24 h-24 mb-6 rounded-2xl bg-red-950 border border-red-500 flex items-center justify-center text-red-500 text-5xl font-black shadow-[0_0_35px_rgba(239,68,68,0.5)] animate-pulse">
+        ⏸️
+      </div>
+
+      <h1
+        class="text-5xl md:text-6xl font-black font-cyber text-red-500 tracking-wider uppercase drop-shadow-[0_2px_15px_rgba(239,68,68,0.4)] animate-[pulse_2.5s_ease-in-out_infinite]">
+        STANDBY / PAUSED
+      </h1>
+      <p
+        class="text-xs md:text-sm font-semibold tracking-widest text-slate-400 uppercase mt-3 max-w-md bg-slate-900/60 px-6 py-2 rounded-full border border-red-500/20 shadow-md backdrop-blur-sm">
+        Permainan Ditangguhkan Sementara
+      </p>
+      <!-- Pesan Penjelas -->
+      <p class="text-xs text-red-400/70 font-medium tracking-wider uppercase mt-12 animate-pulse">
+        Silakan tunggu konfirmasi operator
+      </p>
+    </div>
+  </div>
+
+  <!-- 4B. LEADERBOARD / PODIUM SCREEN (OVERLAY) -->
+  <div id="leaderboardOverlayScreen"
+    class="fixed inset-0 z-40 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 flex flex-col items-center justify-center overflow-hidden transition-all duration-500 hidden">
+    
+    <!-- Cyberpunk grid/strobe lines overlay -->
+    <div
+      class="absolute inset-0 bg-[linear-gradient(to_right,rgba(250,204,21,0.02)_1px,transparent_1px),linear-gradient(to_bottom,rgba(250,204,21,0.02)_1px,transparent_1px)] bg-[size:50px_50px]">
+    </div>
+
+    <!-- Gold/Yellow ambient glow -->
+    <div class="absolute w-[600px] h-[600px] bg-yellow-500/5 rounded-full filter blur-[150px] animate-pulse"></div>
+
+    <div class="relative z-10 w-full max-w-5xl px-6 flex flex-col items-center gap-6">
+      
+      <!-- Leaderboard Header -->
+      <div class="text-center mb-2">
+        <h1 class="text-4xl md:text-5xl font-black font-cyber text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-amber-300 to-yellow-500 tracking-wider uppercase drop-shadow-[0_5px_15px_rgba(250,204,21,0.4)]">
+          KLASEMEN AKHIR
+        </h1>
+        <p class="text-xs text-slate-400 font-semibold tracking-widest uppercase mt-1">PODIUM JUARA FAMILY 100 TRPL</p>
+      </div>
+
+      <!-- PODIUM 1-3 -->
+      <div id="leaderboardPodium" class="w-full flex items-end justify-center gap-4 md:gap-8 mt-6 h-72">
+        <!-- Dynamically rendered podium bars (2nd, 1st, 3rd) -->
+      </div>
+
+      <!-- RUNNERS UP (Rank 4-5) -->
+      <div id="leaderboardList" class="w-full max-w-2xl grid grid-cols-1 gap-3 mt-6">
+        <!-- Dynamically rendered ranking list items -->
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 5. COUNTDOWN OVERLAY FOR TRANSITIONS -->
+  <div id="countdownOverlayScreen"
+    class="hidden fixed inset-0 z-50 bg-slate-950 flex flex-col items-center justify-center overflow-hidden transition-all duration-300">
+    <!-- Cyberpunk grid lines -->
+    <div
+      class="absolute inset-0 bg-[linear-gradient(to_right,rgba(250,204,21,0.02)_1px,transparent_1px),linear-gradient(to_bottom,rgba(250,204,21,0.02)_1px,transparent_1px)] bg-[size:50px_50px]">
+    </div>
+
+    <div class="text-center relative z-10 select-none">
+      <!-- Outer rotating glowing circle -->
+      <div
+        class="w-72 h-72 rounded-full border-4 border-dashed border-yellow-500/20 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-[spin_8s_linear_infinite]">
+      </div>
+
+      <!-- Big central number with pop animation -->
+      <div id="countdownNumber"
+        class="text-[12rem] font-black font-cyber text-transparent bg-clip-text bg-gradient-to-br from-yellow-400 via-amber-300 to-yellow-500 tracking-tighter filter drop-shadow-[0_0_35px_rgba(250,204,21,0.6)] select-none">
+        3
+      </div>
+      <p class="text-lg font-bold tracking-widest text-yellow-400 uppercase animate-pulse mt-4">
+        GAME MULAI DALAM...
+      </p>
+    </div>
+  </div>
+
+  <script>
+    // SOCKET IO CONNECTION
+    const socket = io();
+
+    // INITIAL STATE OBJECT
+    let state = {
+      questions: [],
+      scores: [0, 0, 0, 0, 0],
+      currentQuestionIndex: 0,
+      openedAnswers: [],
+      wrongCount: 0,
+      activeGroupIndex: null,
+      buzzerActive: false,
+      buzzerGroup: null,
+      roomPin: "1234",
+      screenView: "bumper",
+      roundPoints: 0,
+      initialGroupIndex: null
+    };
+
+    // State transition tracking
+    let lastScreenView = "bumper";
+
+    // AUDIO CONTEXT UNLOCK & FALLBACK
+    let audioCtx = null;
+    let audioEnabled = false;
+
+    function unlockAudio() {
+      if (audioEnabled) return;
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const buffer = audioCtx.createBuffer(1, 1, 22050);
+        const source = audioCtx.createBufferSource();
+        source.buffer = buffer;
+        source.connect(audioCtx.destination);
+        source.start(0);
+
+        audioEnabled = true;
+        document.getElementById('audioUnlockBanner').classList.add('hidden');
+        console.log("Audio Context successfully unlocked.");
+      } catch (e) {
+        console.error("Audio Context unlock error", e);
+      }
+    }
+
+    // AUDIO PLAYER & RETRO SYNTHESIZER
+    function playSoundEffect(type) {
+      if (!audioEnabled) {
+        console.log("Audio not unlocked yet.");
+        return;
+      }
+
+      const audioMap = {
+        correct: 'assets/correct.mp3',
+        wrong: 'assets/wrong.mp3',
+        buzzer: 'assets/buzzer.mp3'
+      };
+
+      const audio = new Audio(audioMap[type]);
+      audio.play().catch(() => {
+        if (!audioCtx) return;
+
+        if (type === 'correct') {
+          const freqs = [523.25, 659.25, 783.99, 1046.50];
+          freqs.forEach((freq, idx) => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime + idx * 0.1);
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime + idx * 0.1);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + idx * 0.1 + 0.25);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(audioCtx.currentTime + idx * 0.1);
+            osc.stop(audioCtx.currentTime + idx * 0.1 + 0.3);
+          });
+        } else if (type === 'wrong') {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(130, audioCtx.currentTime);
+          osc.frequency.linearRampToValueAtTime(80, audioCtx.currentTime + 0.6);
+          gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.001, audioCtx.currentTime + 0.6);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 0.6);
+        } else if (type === 'buzzer') {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(320, audioCtx.currentTime);
+          gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.001, audioCtx.currentTime + 0.8);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 0.8);
+        } else if (type === 'tick') {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+          gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 0.15);
+        } else if (type === 'theme') {
+          // Retro Synthesizer Theme Song Khas Family 100 (Arpeggio Melodi)
+          const notes = [
+            { f: 523.25, d: 0.15 }, { f: 587.33, d: 0.15 }, { f: 659.25, d: 0.15 }, { f: 783.99, d: 0.3 },
+            { f: 659.25, d: 0.15 }, { f: 783.99, d: 0.3 }, { f: 880.00, d: 0.15 }, { f: 1046.50, d: 0.45 },
+            { f: 880.00, d: 0.15 }, { f: 783.99, d: 0.15 }, { f: 659.25, d: 0.15 }, { f: 587.33, d: 0.3 },
+            { f: 523.25, d: 0.3 }
+          ];
+          let timeOffset = 0;
+          notes.forEach(n => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            // Campuran square + triangle agar terdengar retro game show
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(n.f, audioCtx.currentTime + timeOffset);
+            
+            gain.gain.setValueAtTime(0.08, audioCtx.currentTime + timeOffset);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + timeOffset + n.d);
+            
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            osc.start(audioCtx.currentTime + timeOffset);
+            osc.stop(audioCtx.currentTime + timeOffset + n.d);
+            timeOffset += n.d + 0.05;
+          });
+        }
+      });
+    }
+
+    // STATE LOADING LOCALSTORAGE fallback
+    function loadStateFromStorage() {
+      const saved = localStorage.getItem('family100_state');
+      if (saved) {
+        try {
+          state = JSON.parse(saved);
+          if (!state.screenView) {
+            state.screenView = "bumper";
+          }
+          if (state.roundPoints === undefined) {
+            state.roundPoints = 0;
+          }
+          if (state.initialGroupIndex === undefined) {
+            state.initialGroupIndex = null;
+          }
+          renderAll();
+        } catch (e) {
+          console.error("Gagal memuat state dari localStorage di Board", e);
+        }
+      }
+    }
+
+    // RENDER FUNCTIONS
+    function renderAll() {
+      renderQuestion();
+      renderAnswers();
+      renderScoreboard();
+      renderStrikes();
+      updateScreenVisibility();
+    }
+
+    let countdownInterval = null;
+    let lastQuestionIndex = null;
+
+    function updateScreenVisibility() {
+      const bumperScreen = document.getElementById('bumperOverlayScreen');
+      const pendingScreen = document.getElementById('pendingOverlayScreen');
+      const countdownScreen = document.getElementById('countdownOverlayScreen');
+      const countdownNum = document.getElementById('countdownNumber');
+      if (!bumperScreen || !pendingScreen || !countdownScreen) return;
+
+      const nextView = state.screenView || 'bumper';
+      
+      // Deteksi perubahan soal saat sedang di board view
+      const isQuestionChanged = (lastQuestionIndex !== null && state.currentQuestionIndex !== lastQuestionIndex);
+      
+      // Update lastQuestionIndex
+      if (state.currentQuestionIndex !== undefined) {
+        // Jika baru pertama kali load
+        if (lastQuestionIndex === null) {
+          lastQuestionIndex = state.currentQuestionIndex;
+        }
+      }
+
+      // Jika transisi dari Bumper/Pending ke Board, ATAU soal berpindah saat sedang di board view
+      if (((lastScreenView === 'bumper' || lastScreenView === 'pending') && nextView === 'board') || (nextView === 'board' && isQuestionChanged)) {
+        lastScreenView = 'board'; // prevent repeating
+        lastQuestionIndex = state.currentQuestionIndex;
+
+        // Ensure any previous countdown is cleared
+        if (countdownInterval) clearInterval(countdownInterval);
+
+        // Jika transisi soal, kita sembunyikan board dulu dan tampilkan countdown screen
+        countdownScreen.classList.remove('hidden');
+
+        let count = 3;
+        countdownNum.innerText = count;
+        playSoundEffect('tick');
+        resetCountdownAnimation();
+
+        countdownInterval = setInterval(() => {
+          count--;
+          if (count > 0) {
+            countdownNum.innerText = count;
+            playSoundEffect('tick');
+            resetCountdownAnimation();
+          } else {
+            clearInterval(countdownInterval);
+            countdownInterval = null;
+
+            countdownNum.innerText = "GO!";
+            playSoundEffect('correct');
+            resetCountdownAnimation();
+
+            setTimeout(() => {
+              countdownScreen.classList.add('hidden');
+              bumperScreen.classList.add('hidden');
+              pendingScreen.classList.add('hidden');
+              // Beritahu server bahwa countdown selesai, agar buzzer otomatis terbuka (READY)
+              socket.emit('board_countdown_finished');
+            }, 800);
+          }
+        }, 1000);
+
+      } else {
+        // Normal transition without countdown
+        lastScreenView = nextView;
+        if (state.currentQuestionIndex !== undefined) {
+          lastQuestionIndex = state.currentQuestionIndex;
+        }
+        if (countdownInterval) {
+          clearInterval(countdownInterval);
+          countdownInterval = null;
+        }
+        countdownScreen.classList.add('hidden');
+
+        if (nextView === 'bumper') {
+          bumperScreen.classList.remove('hidden');
+          pendingScreen.classList.add('hidden');
+          document.getElementById('leaderboardOverlayScreen').classList.add('hidden');
+          // Mainkan backsound theme song Family 100 secara otomatis saat bumper aktif
+          playSoundEffect('theme');
+        } else if (nextView === 'pending') {
+          bumperScreen.classList.add('hidden');
+          pendingScreen.classList.remove('hidden');
+          document.getElementById('leaderboardOverlayScreen').classList.add('hidden');
+        } else if (nextView === 'leaderboard') {
+          bumperScreen.classList.add('hidden');
+          pendingScreen.classList.add('hidden');
+          document.getElementById('leaderboardOverlayScreen').classList.remove('hidden');
+          renderLeaderboard();
+        } else {
+          bumperScreen.classList.add('hidden');
+          pendingScreen.classList.add('hidden');
+          document.getElementById('leaderboardOverlayScreen').classList.add('hidden');
+        }
+      }
+    }
+
+    function resetCountdownAnimation() {
+      const countdownNum = document.getElementById('countdownNumber');
+      if (!countdownNum) return;
+      countdownNum.classList.remove('countdown-pop');
+      void countdownNum.offsetWidth; // trigger reflow
+      countdownNum.classList.add('countdown-pop');
+    }
+
+    function renderQuestion() {
+      const qText = document.getElementById('boardQuestionText');
+      if (state.questions && state.questions[state.currentQuestionIndex]) {
+        qText.innerText = state.questions[state.currentQuestionIndex].question;
+      } else {
+        qText.innerText = "Menunggu Soal Aktif dari Operator...";
+      }
+    }
+
+    function renderAnswers() {
+      const grid = document.getElementById('answersGrid');
+      grid.innerHTML = '';
+
+      if (!state.questions || state.questions.length === 0 || !state.questions[state.currentQuestionIndex]) {
+        return;
+      }
+
+      const currentQ = state.questions[state.currentQuestionIndex];
+
+      currentQ.answers.forEach((ans, idx) => {
+        const isOpen = state.openedAnswers.includes(idx);
+
+        const card = document.createElement('div');
+        card.className = `flip-card h-16 lg:h-20 w-full ${isOpen ? 'flipped' : ''}`;
+
+        card.innerHTML = `
+          <div class="flip-card-inner w-full h-full relative">
+            <!-- CLOSED FRONT -->
+            <div class="flip-card-front absolute w-full h-full rounded-2xl bg-gradient-to-r from-slate-900 to-indigo-950 border-2 border-yellow-500/30 flex items-center justify-between px-8 text-yellow-400/90 shadow-[0_0_15px_rgba(30,41,59,0.5),inset_0_0_20px_rgba(250,204,21,0.05)]">
+              <span class="font-extrabold font-cyber text-2xl tracking-wider text-slate-500">???</span>
+              <div class="w-10 h-10 lg:w-12 lg:h-12 rounded-full bg-yellow-500/15 border border-yellow-500/50 flex items-center justify-center font-black text-xl lg:text-2xl text-yellow-400 font-cyber shadow-[0_0_15px_rgba(250,204,21,0.2)]">
+                ${idx + 1}
+              </div>
+            </div>
+            <!-- OPENED BACK -->
+            <div class="flip-card-back absolute w-full h-full rounded-2xl bg-gradient-to-r from-yellow-500 via-amber-400 to-yellow-500 text-slate-950 border-2 border-yellow-300 flex items-center justify-between px-8 shadow-[0_0_25px_rgba(250,204,21,0.3)]">
+              <span class="font-black tracking-widest text-lg lg:text-xl uppercase">${ans.text}</span>
+              <span class="font-black font-cyber text-2xl lg:text-3xl tracking-wider bg-slate-950 text-yellow-400 px-4 py-1.5 rounded-xl border-2 border-yellow-400/60 shadow-lg shadow-black/40">
+                ${ans.points}
+              </span>
+            </div>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function renderScoreboard() {
+      const container = document.getElementById('teamScoresBoard');
+      container.innerHTML = '';
+
+      for (let i = 0; i < 5; i++) {
+        const isSelected = state.activeGroupIndex === i;
+        const score = state.scores[i] || 0;
+
+        const card = document.createElement('div');
+        card.className = `p-4 border rounded-2xl flex flex-col items-center justify-center transition-all duration-300 ${isSelected
+            ? 'bg-yellow-400/10 border-yellow-400 neon-gold-glow-active scale-105'
+            : 'bg-slate-950/50 border-slate-900/80 shadow-[0_4px_10px_rgba(0,0,0,0.3)] hover:border-slate-800'
+          }`;
+
+        card.innerHTML = `
+          <span class="text-xs font-bold uppercase tracking-widest ${isSelected ? 'text-yellow-400' : 'text-slate-400'} mb-1">
+            Kelompok ${i + 1}
+          </span>
+          <span class="text-3xl lg:text-4xl font-black font-cyber tracking-widest ${isSelected ? 'text-yellow-300' : 'text-white'}">
+            ${score}
+          </span>
+          ${isSelected ? '<span class="text-[9px] text-yellow-400 font-extrabold uppercase mt-1 animate-pulse tracking-wide">Kelompok Aktif</span>' : ''}
+        `;
+        container.appendChild(card);
+      }
+    }
+
+    function renderStrikes() {
+      for (let i = 1; i <= 3; i++) {
+        const indicator = document.getElementById(`strikeIndicator${i}`);
+        if (state.wrongCount >= i) {
+          indicator.className = 'w-10 h-10 rounded border border-red-500 bg-red-950/80 flex items-center justify-center font-black text-xl text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.7)] transition-all';
+        } else {
+          indicator.className = 'w-10 h-10 rounded border border-slate-800 bg-slate-950/20 flex items-center justify-center font-black text-xl text-slate-800 transition-all';
+        }
+      }
+    }
+
+    function renderLeaderboard() {
+      const podiumContainer = document.getElementById('leaderboardPodium');
+      const listContainer = document.getElementById('leaderboardList');
+      if (!podiumContainer || !listContainer) return;
+
+      // Buat array pasangan {groupIndex: 1-5, score}
+      const teams = [];
+      for (let i = 0; i < 5; i++) {
+        teams.push({
+          index: i + 1,
+          score: state.scores[i] || 0
+        });
+      }
+
+      // Sort descending berdasarkan skor
+      teams.sort((a, b) => b.score - a.score);
+
+      // Ambil podium (Juara 1, 2, 3)
+      const first = teams[0];
+      const second = teams[1];
+      const third = teams[2];
+
+      // Urutan render podium: Juara 2 (Kiri), Juara 1 (Tengah), Juara 3 (Kanan)
+      podiumContainer.innerHTML = `
+        <!-- JUARA 2 (KIRI) -->
+        <div class="flex flex-col items-center w-28 md:w-36 transition-all duration-1000 transform translate-y-0 opacity-100">
+          <div class="text-slate-300 font-extrabold text-sm md:text-base uppercase tracking-wider mb-2">Kelompok ${second.index}</div>
+          <div class="text-2xl md:text-3xl font-black font-cyber text-slate-200 mb-2">${second.score}</div>
+          <div class="w-full bg-gradient-to-t from-slate-700/80 to-slate-500/80 border-t-4 border-slate-400 rounded-t-2xl flex flex-col items-center justify-start pt-4 shadow-[0_-5px_20px_rgba(148,163,184,0.15)]" style="height: 140px;">
+            <span class="text-4xl md:text-5xl font-black font-cyber text-slate-300/60 drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">2</span>
+            <span class="text-[9px] md:text-xs font-bold text-slate-300 uppercase tracking-widest mt-1">SILVER</span>
+          </div>
+        </div>
+
+        <!-- JUARA 1 (TENGAH - TERBESAR & TERTINGGI) -->
+        <div class="flex flex-col items-center w-32 md:w-44 transition-all duration-1000 transform translate-y-0 opacity-100 z-10 scale-105">
+          <!-- Crown Icon or Trophy -->
+          <div class="text-3xl animate-bounce mb-1">👑</div>
+          <div class="text-yellow-400 font-black text-base md:text-lg uppercase tracking-widest mb-2 drop-shadow-[0_0_10px_rgba(250,204,21,0.3)]">Kelompok ${first.index}</div>
+          <div class="text-3xl md:text-4xl font-cyber font-black text-yellow-300 mb-2 drop-shadow-[0_0_15px_rgba(250,204,21,0.5)]">${first.score}</div>
+          <div class="w-full bg-gradient-to-t from-yellow-600/90 via-amber-500/90 to-yellow-400/90 border-t-4 border-yellow-300 rounded-t-2xl flex flex-col items-center justify-start pt-6 shadow-[0_-5px_30px_rgba(250,204,21,0.4)]" style="height: 190px;">
+            <span class="text-5xl md:text-6xl font-black font-cyber text-slate-950 drop-shadow-[0_2px_4px_rgba(250,204,21,0.4)]">1</span>
+            <span class="text-[10px] md:text-xs font-black text-slate-950 uppercase tracking-widest mt-1">CHAMPION</span>
+          </div>
+        </div>
+
+        <!-- JUARA 3 (KANAN) -->
+        <div class="flex flex-col items-center w-28 md:w-36 transition-all duration-1000 transform translate-y-0 opacity-100">
+          <div class="text-amber-600 font-extrabold text-sm md:text-base uppercase tracking-wider mb-2">Kelompok ${third.index}</div>
+          <div class="text-2xl md:text-3xl font-black font-cyber text-amber-500 mb-2">${third.score}</div>
+          <div class="w-full bg-gradient-to-t from-amber-800/80 to-amber-700/80 border-t-4 border-amber-600 rounded-t-2xl flex flex-col items-center justify-start pt-4 shadow-[0_-5px_20px_rgba(180,83,9,0.15)]" style="height: 110px;">
+            <span class="text-4xl md:text-5xl font-black font-cyber text-amber-600/60 drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">3</span>
+            <span class="text-[9px] md:text-xs font-bold text-amber-400 uppercase tracking-widest mt-1">BRONZE</span>
+          </div>
+        </div>
+      `;
+
+      // Render peringkat 4 & 5
+      listContainer.innerHTML = '';
+      for (let i = 3; i < 5; i++) {
+        const item = teams[i];
+        if (!item) continue;
+        const row = document.createElement('div');
+        row.className = 'w-full flex items-center justify-between p-4 bg-slate-900/60 border border-slate-800/80 rounded-xl hover:border-slate-700 transition-colors shadow-sm';
+        row.innerHTML = `
+          <div class="flex items-center gap-4">
+            <span class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-sm font-bold text-slate-400 border border-slate-700">${i + 1}</span>
+            <span class="font-extrabold uppercase text-slate-300 tracking-wider">Kelompok ${item.index}</span>
+          </div>
+          <span class="text-xl font-black font-cyber text-slate-400">${item.score} Poin</span>
+        `;
+        listContainer.appendChild(row);
+      }
+    }
+
+    // SOCKET.IO INCOMING MESSAGES
+    socket.on('connect', () => {
+      console.log("Connected to Server");
+      socket.emit('join_role', { role: 'board' });
+    });
+
+    socket.on('sync_state', (serverState) => {
+      state = serverState;
+      // Backup locally
+      localStorage.setItem('family100_state', JSON.stringify(state));
+      renderAll();
+    });
+
+    socket.on('play_sound', (data) => {
+      playSoundEffect(data.sound);
+    });
+
+    socket.on('show_wrong', (data) => {
+      showWrongOverlay(data.wrongCount);
+    });
+
+    socket.on('buzzer_trigger', (data) => {
+      showBuzzerOverlay(data.groupIndex);
+    });
+
+    // OVERLAY TRIGGERS
+    function showBuzzerOverlay(groupIndex) {
+      const overlay = document.getElementById('buzzerOverlay');
+      const text = document.getElementById('buzzerOverlayText');
+
+      text.innerText = `KELOMPOK ${groupIndex} MENJAWAB!`;
+      overlay.classList.remove('hidden');
+
+      setTimeout(() => {
+        overlay.classList.add('hidden');
+      }, 3000);
+    }
+
+    function showWrongOverlay(wrongCount) {
+      const overlay = document.getElementById('wrongOverlay');
+      const container = document.getElementById('wrongXContainer');
+      container.innerHTML = '';
+
+      for (let i = 0; i < wrongCount; i++) {
+        const xEl = document.createElement('div');
+        xEl.className = 'text-red-600 text-[12rem] font-black tracking-tighter neon-red-glow filter drop-shadow-[0_0_30px_rgba(239,68,68,1)] animate-[ping_0.5s_ease-in-out_1]';
+        xEl.style.textShadow = '0 0 40px #ef4444';
+        xEl.innerText = 'X';
+        container.appendChild(xEl);
+      }
+
+      overlay.classList.remove('hidden');
+
+      setTimeout(() => {
+        overlay.classList.add('hidden');
+      }, 2000);
+    }
+
+    // INITIAL SETUP
+    loadStateFromStorage();
+    initBumperStardust();
+    window.addEventListener('click', unlockAudio);
+
+    function initBumperStardust() {
+      const container = document.getElementById('bumperStardust');
+      if (!container) return;
+
+      container.innerHTML = '';
+      const count = 45;
+
+      for (let i = 0; i < count; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'stardust-particle';
+
+        // Random dimensions
+        const size = Math.random() * 8 + 4;
+        particle.style.width = `${size}px`;
+        particle.style.height = `${size}px`;
+
+        // Random starting horizontal position
+        particle.style.left = `${Math.random() * 100}%`;
+
+        // Random duration and delay
+        const duration = Math.random() * 10 + 10;
+        const delay = Math.random() * -20;
+        particle.style.animationDuration = `${duration}s`;
+        particle.style.animationDelay = `${delay}s`;
+
+        // Custom horizontal drift
+        const drift = (Math.random() * 200 - 100) + 'px';
+        particle.style.setProperty('--drift-x', drift);
+
+        // Random opacity
+        particle.style.opacity = Math.random() * 0.5 + 0.3;
+
+        container.appendChild(particle);
+      }
+    }
+  </script>
+</body>
+
+</html>

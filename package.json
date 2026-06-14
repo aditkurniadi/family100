@@ -1,0 +1,13 @@
+{
+  "name": "family100_trpl",
+  "version": "1.0.0",
+  "description": "Family 100 game for Dies Natalis TRPL with Socket.io real-time connection",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "socket.io": "^4.8.1"
+  }
+}
