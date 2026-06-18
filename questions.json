@@ -1,6 +1,5 @@
 [
   {
-    "category": "UMUM",
     "question": "Sebutkan makanan khas Indonesia yang sangat populer!",
     "answers": [
       {
@@ -26,7 +25,6 @@
     ]
   },
   {
-    "category": "UMUM",
     "question": "Sebutkan perlengkapan sekolah yang wajib dibawa siswa!",
     "answers": [
       {
@@ -52,7 +50,6 @@
     ]
   },
   {
-    "category": "UMUM",
     "question": "Benda apa di dalam rumah yang sering digunakan untuk bercermin?",
     "answers": [
       {
@@ -70,7 +67,6 @@
     ]
   },
   {
-    "category": "UMUM",
     "question": "Sebutkan hewan berkaki empat yang memiliki leher sangat panjang!",
     "answers": [
       {

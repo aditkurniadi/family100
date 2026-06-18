@@ -187,21 +187,35 @@
           localStorage.removeItem('family100_buzzer_group');
           localStorage.removeItem('family100_buzzer_pin');
         }
-      });
-
-      // Sync game state to reflect locked states
+            // Sync game state to reflect locked states
       socket.on('sync_state', (state) => {
         if (!myGroup) return; // not logged in yet
 
-        isBuzzerLocked = state.buzzerState !== 'READY';
+        const isDisqualified = state.disqualifiedGroups && state.disqualifiedGroups.includes(myGroup - 1);
+        isBuzzerLocked = isDisqualified || state.buzzerState !== 'READY';
 
         const btn = document.getElementById('btnBuzz');
         const statusText = document.getElementById('buzzerStatusText');
         const pulse = document.getElementById('outerPulse');
 
+        // Clear any local countdown interval since we now use state.timerSeconds
+        if (window.buzzerCountdownInterval) {
+          clearInterval(window.buzzerCountdownInterval);
+          window.buzzerCountdownInterval = null;
+        }
+
+        if (isDisqualified) {
+          statusText.innerText = "Kelompok Anda Gugur di Ronde Ini!";
+          statusText.className = "text-md text-rose-500 tracking-wide font-bold uppercase";
+          btn.className = "no-select w-52 h-52 rounded-full bg-slate-900 border-8 border-rose-950 text-rose-600 font-black text-3xl tracking-widest flex items-center justify-center shadow-inner select-none cursor-not-allowed opacity-30";
+          btn.innerHTML = "GUGUR";
+          pulse.classList.add('hidden');
+          updateMyScore(state.scores);
+          return;
+        }
+
         if (state.buzzerState === 'LOCKED') {
           // BUZZERS LOCKED BY OPERATOR
-          if (window.buzzerCountdownInterval) clearInterval(window.buzzerCountdownInterval);
           statusText.innerText = "Buzzer Terkunci. Menunggu aba-aba...";
           statusText.className = "text-md text-slate-500 tracking-wide font-semibold";
           btn.className = "no-select w-52 h-52 rounded-full bg-slate-900 border-8 border-slate-800 text-slate-600 font-black text-3xl tracking-widest flex items-center justify-center shadow-inner select-none cursor-not-allowed opacity-30";
@@ -209,8 +223,6 @@
           pulse.classList.add('hidden');
         } else if (state.buzzerState === 'COUNTDOWN') {
           // COUNTDOWN PHASE
-          if (window.buzzerCountdownInterval) clearInterval(window.buzzerCountdownInterval);
-          
           statusText.innerText = "Soal sedang bersiap... Tunggu hitung mundur!";
           statusText.className = "text-md text-indigo-400 font-bold uppercase tracking-wider animate-pulse";
           btn.className = "no-select w-52 h-52 rounded-full bg-slate-950 border-8 border-indigo-900/40 text-indigo-500 font-black text-5xl tracking-widest flex flex-col items-center justify-center shadow-inner select-none cursor-not-allowed opacity-80";
@@ -231,25 +243,13 @@
           }, 1000);
 
         } else if (state.buzzerState === 'READY') {
-          if (window.buzzerCountdownInterval) {
-            clearInterval(window.buzzerCountdownInterval);
-            window.buzzerCountdownInterval = null;
-          }
-          // Safety: If wrongCount is 3, the group that got 3 strikes (activeGroupIndex) is blocked
-          if (state.wrongCount === 3 && state.activeGroupIndex !== null && (myGroup - 1) === state.activeGroupIndex) {
-            statusText.innerText = "Kelompok Anda Gugur (Buzzer Terkunci)";
-            statusText.className = "text-md text-rose-500 tracking-wide font-semibold";
-            btn.className = "no-select w-52 h-52 rounded-full bg-slate-900 border-8 border-slate-800 text-slate-600 font-black text-3xl tracking-widest flex items-center justify-center shadow-inner select-none cursor-not-allowed opacity-30";
-            btn.innerHTML = "LOCKED";
-            pulse.classList.add('hidden');
-          } else {
-            // BUZZERS READY FOR REBUTAN
-            statusText.innerText = "SIAGA! Tekan tombol sekarang!";
-            statusText.className = "text-lg text-yellow-400 tracking-wide font-black uppercase animate-pulse";
-            btn.className = "no-select w-52 h-52 rounded-full bg-gradient-to-b from-yellow-400 to-amber-500 border-8 border-yellow-300 text-slate-950 font-black text-4xl tracking-widest uppercase flex items-center justify-center shadow-2xl transition-all duration-150 select-none cursor-pointer focus:outline-none neon-btn-glow neon-btn-active";
-            btn.innerHTML = "BUZZ!";
-            pulse.classList.add('hidden');
-          }
+          // BUZZERS READY FOR REBUTAN
+          const secondsLeft = state.timerType === 'discussion' ? ` (${state.timerSeconds}s)` : '';
+          statusText.innerText = `SIAGA! Tekan tombol sekarang!${secondsLeft}`;
+          statusText.className = "text-lg text-yellow-400 tracking-wide font-black uppercase animate-pulse";
+          btn.className = "no-select w-52 h-52 rounded-full bg-gradient-to-b from-yellow-400 to-amber-500 border-8 border-yellow-300 text-slate-950 font-black text-4xl tracking-widest uppercase flex items-center justify-center shadow-2xl transition-all duration-150 select-none cursor-pointer focus:outline-none neon-btn-glow neon-btn-active";
+          btn.innerHTML = "BUZZ!";
+          pulse.classList.add('hidden');
         } else if (state.buzzerState === 'BUZZED') {
           // A GROUP BUZZED
           if (state.buzzerGroup === myGroup) {
@@ -260,38 +260,21 @@
             pulse.classList.remove('hidden');
             pulse.className = "absolute w-56 h-56 rounded-full bg-emerald-500/10 border border-emerald-500/20 animate-ping";
 
-            // Jalankan countdown local 3 detik di tombol
-            if (window.buzzerCountdownInterval) clearInterval(window.buzzerCountdownInterval);
-            let timeRemaining = 3;
-            btn.innerHTML = `<span class="text-xs font-bold tracking-widest uppercase opacity-75 mb-1">Menjawab</span><span class="text-6xl font-black font-cyber text-yellow-300 animate-pulse">${timeRemaining}</span>`;
-            
-            window.buzzerCountdownInterval = setInterval(() => {
-              timeRemaining--;
-              if (timeRemaining > 0) {
-                btn.innerHTML = `<span class="text-xs font-bold tracking-widest uppercase opacity-75 mb-1">Menjawab</span><span class="text-6xl font-black font-cyber text-yellow-300 animate-pulse">${timeRemaining}</span>`;
-              } else {
-                clearInterval(window.buzzerCountdownInterval);
-                btn.innerHTML = "LOCKED";
-                statusText.innerText = "Waktu menjawab habis!";
-                statusText.className = "text-lg text-rose-500 font-extrabold uppercase";
-                btn.className = "no-select w-52 h-52 rounded-full bg-slate-800 border-8 border-slate-700 text-slate-500 font-black text-3xl tracking-widest flex items-center justify-center shadow-inner select-none cursor-not-allowed opacity-40";
-              }
-            }, 1000);
+            const sec = state.timerSeconds !== undefined ? state.timerSeconds : 5;
+            btn.innerHTML = `<span class="text-xs font-bold tracking-widest uppercase opacity-75 mb-1">Menjawab</span><span class="text-6xl font-black font-cyber text-yellow-300 animate-pulse">${sec}</span>`;
           } else {
             // SOMEONE ELSE WON
-            if (window.buzzerCountdownInterval) clearInterval(window.buzzerCountdownInterval);
-            statusText.innerText = `Kelompok ${state.buzzerGroup} Menjawab...`;
+            const sec = state.timerSeconds !== undefined ? ` (${state.timerSeconds}s)` : '';
+            statusText.innerText = `Kelompok ${state.buzzerGroup} Menjawab...${sec}`;
             statusText.className = "text-lg text-slate-400 tracking-wide font-semibold";
             btn.className = "no-select w-52 h-52 rounded-full bg-slate-800 border-8 border-slate-700 text-slate-500 font-black text-3xl tracking-widest flex items-center justify-center shadow-inner select-none cursor-not-allowed opacity-40";
             btn.innerHTML = "LOCKED";
             pulse.classList.add('hidden');
-          }
         }
 
         // Update poin kelompok sendiri
         updateMyScore(state.scores);
       });
-    });
 
     // Handle Login submission
     function submitLogin(e) {

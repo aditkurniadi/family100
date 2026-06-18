@@ -99,8 +99,120 @@ let gameState = {
   roundPoints: 0,
   initialGroupIndex: null,
   operatorPassword: "trpl2025", // Password login operator dinamis
-  settingsPassword: "trpl2025" // Password pengaturan soal dinamis
+  settingsPassword: "trpl2025", // Password pengaturan soal dinamis
+  timerType: null, // null, 'discussion', 'answer'
+  timerSeconds: 0,
+  disqualifiedGroups: [] // List of 0-based group indices that have completed 3 strikes for this question
 };
+
+let gameTimerInterval = null;
+
+function stopActiveTimer() {
+  if (gameTimerInterval) {
+    clearInterval(gameTimerInterval);
+    gameTimerInterval = null;
+  }
+  if (startTimerTimeout) {
+    clearTimeout(startTimerTimeout);
+    startTimerTimeout = null;
+  }
+  gameState.timerType = null;
+  gameState.timerSeconds = 0;
+}
+
+let startTimerTimeout = null;
+
+function startTimer(type, seconds, delayMs = 0) {
+  stopActiveTimer();
+
+  // DO NOT start the timer if the active screen is not the main game board
+  if (gameState.screenView !== 'board') {
+    gameState.timerType = null;
+    gameState.timerSeconds = 0;
+    io.emit('sync_state', gameState);
+    return;
+  }
+
+  gameState.timerType = type;
+  gameState.timerSeconds = seconds;
+  io.emit('sync_state', gameState);
+
+  if (delayMs > 0) {
+    startTimerTimeout = setTimeout(() => {
+      startTimerTimeout = null;
+      startTimerInterval(type);
+    }, delayMs);
+  } else {
+    startTimerInterval(type);
+  }
+}
+
+function startTimerInterval(type) {
+  if (gameTimerInterval) clearInterval(gameTimerInterval);
+  gameTimerInterval = setInterval(() => {
+    if (gameState.timerSeconds > 0) {
+      gameState.timerSeconds--;
+      io.emit('sync_state', gameState);
+    } else {
+      clearInterval(gameTimerInterval);
+      gameTimerInterval = null;
+      handleTimerTimeout(type);
+    }
+  }, 1000);
+}
+
+function handleTimerTimeout(type) {
+  if (type === 'discussion') {
+    gameState.buzzerState = 'LOCKED';
+    io.emit('play_sound', { sound: 'wrong' });
+    io.emit('sync_state', gameState);
+  } else if (type === 'answer') {
+    handleWrongAnswer();
+    io.emit('sync_state', gameState);
+  }
+}
+
+function handleWrongAnswer() {
+  gameState.wrongCount++;
+  
+  if (gameState.activeGroupIndex !== null && gameState.activeGroupIndex >= 0 && gameState.activeGroupIndex < 5) {
+    gameState.scores[gameState.activeGroupIndex] -= 10;
+  }
+
+  io.emit('play_sound', { sound: 'wrong' });
+  io.emit('show_wrong', { wrongCount: gameState.wrongCount });
+
+  if (gameState.wrongCount >= 3) {
+    if (gameState.activeGroupIndex !== null) {
+      if (!gameState.disqualifiedGroups.includes(gameState.activeGroupIndex)) {
+        gameState.disqualifiedGroups.push(gameState.activeGroupIndex);
+      }
+    }
+    gameState.activeGroupIndex = null;
+    gameState.wrongCount = 0;
+
+    let availableGroupsCount = 0;
+    for (let i = 0; i < 5; i++) {
+      if (!gameState.disqualifiedGroups.includes(i)) {
+        availableGroupsCount++;
+      }
+    }
+
+    if (availableGroupsCount > 0) {
+      gameState.buzzerState = 'READY';
+      gameState.buzzerGroup = null;
+      // Wait for wrong overlay animation (2 seconds) to close
+      startTimer('discussion', 15, 2000);
+    } else {
+      gameState.buzzerState = 'LOCKED';
+      gameState.buzzerGroup = null;
+      stopActiveTimer();
+    }
+  } else {
+    // Wait for wrong overlay animation (2 seconds) to close
+    startTimer('answer', 5, 2000);
+  }
+}
 
 // Listen for connections
 io.on('connection', (socket) => {
@@ -155,11 +267,77 @@ io.on('connection', (socket) => {
   socket.on('sync_state', (newState) => {
     // Only accept state updates from authenticated operator
     if (socket.role === 'operator' && socket.operatorAuthenticated) {
-      gameState = newState;
-      if (!gameState.roomPin) {
-        gameState.roomPin = "1234";
+      const questionChanged = newState.currentQuestionIndex !== gameState.currentQuestionIndex;
+      const answerRevealed = (newState.openedAnswers && newState.openedAnswers.length) > (gameState.openedAnswers && gameState.openedAnswers.length);
+      const wrongCountIncreased = newState.wrongCount > gameState.wrongCount;
+      const activeGroupChanged = newState.activeGroupIndex !== gameState.activeGroupIndex;
+
+      // Update basic fields
+      gameState.questions = newState.questions;
+      gameState.scores = newState.scores;
+      gameState.roomPin = newState.roomPin || "1234";
+      gameState.screenView = newState.screenView;
+      gameState.roundPoints = newState.roundPoints;
+      gameState.initialGroupIndex = newState.initialGroupIndex;
+      gameState.operatorPassword = newState.operatorPassword;
+      gameState.settingsPassword = newState.settingsPassword;
+
+      if (questionChanged) {
+        gameState.currentQuestionIndex = newState.currentQuestionIndex;
+        gameState.openedAnswers = [];
+        gameState.wrongCount = 0;
+        gameState.activeGroupIndex = null;
+        gameState.buzzerState = "COUNTDOWN"; // Board will do the 3s countdown, then emit board_countdown_finished
+        gameState.buzzerGroup = null;
+        gameState.roundPoints = 0;
+        gameState.initialGroupIndex = null;
+        gameState.disqualifiedGroups = [];
+        stopActiveTimer();
+      } else {
+        gameState.openedAnswers = newState.openedAnswers || [];
+        gameState.activeGroupIndex = newState.activeGroupIndex;
+        gameState.buzzerState = newState.buzzerState;
+        gameState.buzzerGroup = newState.buzzerGroup;
+
+        // Check if all answers are opened
+        const currentQ = gameState.questions[gameState.currentQuestionIndex];
+        const allAnswersOpened = currentQ && gameState.openedAnswers.length === currentQ.answers.length;
+
+        if (allAnswersOpened) {
+          stopActiveTimer();
+          gameState.buzzerState = 'LOCKED';
+        } else {
+          // If buzzer state is manually locked or changed, reflect timer state
+          if (gameState.buzzerState === 'LOCKED') {
+            stopActiveTimer();
+          } else if (gameState.buzzerState === 'READY' && gameState.timerType !== 'discussion') {
+            startTimer('discussion', 15);
+          }
+
+          if (answerRevealed) {
+            // Restart 5-second answer timer immediately (no overlay shows on correct answer)
+            startTimer('answer', 5);
+          } else if (wrongCountIncreased) {
+            // A wrong answer was manually triggered by operator
+            gameState.wrongCount = newState.wrongCount - 1; 
+            handleWrongAnswer();
+          } else if (activeGroupChanged) {
+            // Active group changed (e.g. operator selected one manually)
+            if (gameState.activeGroupIndex !== null) {
+              gameState.wrongCount = 0;
+              startTimer('answer', 5);
+            } else {
+              stopActiveTimer();
+            }
+          }
+        }
       }
-      
+
+      // Ensure timer is stopped if we are not on the board screen
+      if (gameState.screenView !== 'board') {
+        stopActiveTimer();
+      }
+
       // Persist questions to JSON file
       try {
         fs.writeFileSync(QUESTIONS_FILE, JSON.stringify(gameState.questions || [], null, 2), 'utf8');
@@ -168,7 +346,7 @@ io.on('connection', (socket) => {
       }
 
       // Broadcast state update to everyone else
-      socket.broadcast.emit('sync_state', gameState);
+      io.emit('sync_state', gameState);
     }
   });
 
@@ -190,11 +368,25 @@ io.on('connection', (socket) => {
   // Trigger buzzer from operator keyboard shortcuts
   socket.on('operator_trigger_buzzer', (data) => {
     if (socket.role === 'operator' && socket.operatorAuthenticated) {
+      // Safety: Only allow buzz if state is READY
+      if (gameState.buzzerState !== 'READY') {
+        return;
+      }
+
       const groupNum = parseInt(data.groupIndex, 10);
       
+      // Safety: If group is disqualified, do not allow
+      if (gameState.disqualifiedGroups && gameState.disqualifiedGroups.includes(groupNum - 1)) {
+        return;
+      }
+
       gameState.buzzerState = "BUZZED";
       gameState.buzzerGroup = groupNum;
       gameState.activeGroupIndex = groupNum - 1;
+      gameState.wrongCount = 0; // Fresh 3 lives
+
+      // Start 5-second timer with 3-second delay to wait for overlay card to close
+      startTimer('answer', 5, 3000);
 
       io.emit('sync_state', gameState);
       io.emit('buzzer_trigger', { groupIndex: groupNum });
@@ -216,8 +408,8 @@ io.on('connection', (socket) => {
       return;
     }
 
-    // Safety: If wrongCount is 3, the group that got 3 strikes (activeGroupIndex) cannot buzz!
-    if (gameState.wrongCount === 3 && gameState.activeGroupIndex !== null && (socket.groupIndex - 1) === gameState.activeGroupIndex) {
+    // Safety: If group is disqualified, do not allow
+    if (gameState.disqualifiedGroups && gameState.disqualifiedGroups.includes(socket.groupIndex - 1)) {
       socket.emit('buzzer_feedback', { success: false, message: 'Kelompok Anda sudah gugur di ronde ini!' });
       return;
     }
@@ -228,6 +420,10 @@ io.on('connection', (socket) => {
     gameState.buzzerState = "BUZZED";
     gameState.buzzerGroup = groupNum;
     gameState.activeGroupIndex = groupNum - 1; // Auto highlight active team
+    gameState.wrongCount = 0; // Fresh 3 lives
+
+    // Start 5-second timer with 3-second delay to wait for overlay card to close
+    startTimer('answer', 5, 3000);
 
     // Broadcast update state to everyone
     io.emit('sync_state', gameState);
@@ -243,8 +439,9 @@ io.on('connection', (socket) => {
   // Handle board countdown finished to automatically arm/ready buzzers
   socket.on('board_countdown_finished', () => {
     gameState.buzzerState = "READY";
-    io.emit('sync_state', gameState);
-    console.log("Board countdown finished. Buzzers automatically armed/set to READY.");
+    gameState.disqualifiedGroups = [];
+    startTimer('discussion', 15);
+    console.log("Board countdown finished. Buzzers automatically armed/set to READY, 15s discussion timer started.");
   });
 
   socket.on('disconnect', () => {

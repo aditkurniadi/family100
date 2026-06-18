@@ -139,6 +139,13 @@
       <p class="text-xs text-slate-400 tracking-wider">TEKNOLOGI REKAYASA PERANGKAT LUNAK (TRPL)</p>
     </div>
 
+    <!-- CENTRAL TIMER -->
+    <div id="boardTimerContainer" class="hidden flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900/80 border border-yellow-500/30 shadow-[0_0_15px_rgba(250,204,21,0.1)]">
+      <span id="boardTimerLabel" class="text-xs font-bold text-yellow-400 uppercase tracking-widest">DISKUSI:</span>
+      <span id="boardTimerValue" class="font-cyber font-black text-2xl text-white min-w-[2rem] text-center">15</span>
+      <span class="text-xs text-slate-500 font-bold">DETIK</span>
+    </div>
+
     <!-- STRIKES (X) -->
     <div class="flex items-center gap-3">
       <span class="text-sm font-bold text-slate-400 uppercase tracking-widest mr-2">Strikes:</span>
@@ -191,7 +198,7 @@
         class="text-4xl md:text-5xl font-black font-cyber text-yellow-400 tracking-wider uppercase leading-snug">
         KELOMPOK 1 MENJAWAB!
       </h2>
-      <p class="text-slate-400 text-sm mt-4 tracking-widest uppercase animate-pulse">Waktu Menjawab: 3 Detik</p>
+      <p class="text-slate-400 text-sm mt-4 tracking-widest uppercase animate-pulse">Waktu Menjawab: 5 Detik</p>
     </div>
   </div>
 
@@ -505,7 +512,33 @@
       renderAnswers();
       renderScoreboard();
       renderStrikes();
+      renderTimer();
       updateScreenVisibility();
+    }
+
+    function renderTimer() {
+      const timerContainer = document.getElementById('boardTimerContainer');
+      const timerLabel = document.getElementById('boardTimerLabel');
+      const timerValue = document.getElementById('boardTimerValue');
+      
+      if (!timerContainer || !timerLabel || !timerValue) return;
+
+      if (state.timerType && state.timerSeconds !== undefined) {
+        timerContainer.classList.remove('hidden');
+        timerValue.innerText = state.timerSeconds;
+        
+        if (state.timerType === 'discussion') {
+          timerLabel.innerText = 'DISKUSI:';
+          timerLabel.className = 'text-xs font-bold text-blue-400 uppercase tracking-widest animate-pulse';
+          timerContainer.className = 'flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900/80 border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.15)]';
+        } else if (state.timerType === 'answer') {
+          timerLabel.innerText = 'JAWAB:';
+          timerLabel.className = 'text-xs font-bold text-red-500 uppercase tracking-widest animate-pulse';
+          timerContainer.className = 'flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900/80 border border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.25)]';
+        }
+      } else {
+        timerContainer.classList.add('hidden');
+      }
     }
 
     let countdownInterval = null;
