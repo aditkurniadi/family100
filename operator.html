@@ -673,7 +673,7 @@
       } else if (['q', 'w', 'e', 'r', 't', 'y'].includes(key.toLowerCase())) {
         event.preventDefault();
         const map = { 'q': 0, 'w': 1, 'e': 2, 'r': 3, 't': 4, 'y': 5 };
-        revealAnswer(map[key.toLowerCase()]);
+        toggleAnswer(map[key.toLowerCase()]);
       }
     });
 
@@ -905,8 +905,11 @@
             <span class="text-sm font-extrabold font-cyber text-yellow-400">${ans.points} Poin</span>
             ${
               isOpen 
-                ? `<span class="px-3 py-1 rounded bg-slate-800 text-xs font-semibold text-emerald-400 border border-emerald-500/20">Terbuka</span>`
-                : `<button onclick="revealAnswer(${idx})" class="px-4 py-1 rounded bg-yellow-500 hover:bg-yellow-600 text-slate-950 font-bold text-xs active:scale-95 transition-all">Buka [${['Q','W','E','R','T','Y'][idx]}]</button>`
+                ? `<div class="flex items-center gap-2">
+                     <span class="px-3 py-1 rounded bg-slate-800 text-xs font-semibold text-emerald-400 border border-emerald-500/20">Terbuka</span>
+                     <button onclick="toggleAnswer(${idx})" class="px-3 py-1 rounded bg-slate-800 hover:bg-rose-900 text-slate-400 hover:text-rose-400 border border-slate-700 hover:border-rose-500 font-bold text-[10px] uppercase active:scale-95 transition-all" title="Tutup kembali jawaban ini">Tutup [${['Q','W','E','R','T','Y'][idx]}]</button>
+                   </div>`
+                : `<button onclick="toggleAnswer(${idx})" class="px-4 py-1 rounded bg-yellow-500 hover:bg-yellow-600 text-slate-950 font-bold text-xs active:scale-95 transition-all">Buka [${['Q','W','E','R','T','Y'][idx]}]</button>`
             }
           </div>
         `;
@@ -914,26 +917,40 @@
       });
     }
 
-    function revealAnswer(idx) {
+    function toggleAnswer(idx) {
       if (!state.questions || !state.questions[state.currentQuestionIndex]) return;
-      if (state.openedAnswers.includes(idx)) return;
       
       const currentQ = state.questions[state.currentQuestionIndex];
       const answer = currentQ.answers[idx];
       if (!answer) return;
       
-      state.openedAnswers.push(idx);
+      const isOpen = state.openedAnswers.includes(idx);
 
-      if (state.activeGroupIndex !== null && state.activeGroupIndex >= 0 && state.activeGroupIndex < 5) {
-        state.scores[state.activeGroupIndex] += answer.points;
-        state.roundPoints = (state.roundPoints || 0) + answer.points;
+      if (isOpen) {
+        // CLOSE ANSWER
+        state.openedAnswers = state.openedAnswers.filter(i => i !== idx);
+        
+        if (state.activeGroupIndex !== null && state.activeGroupIndex >= 0 && state.activeGroupIndex < 5) {
+          state.scores[state.activeGroupIndex] -= answer.points;
+          state.roundPoints = (state.roundPoints || 0) - answer.points;
+        } else {
+          alert("Info: Jawaban ditutup. Karena tidak ada kelompok aktif terpilih, poin tidak dikurangi secara otomatis.");
+        }
       } else {
-        alert("Info: Tidak ada kelompok aktif terpilih. Jawaban dibuka tanpa akumulasi poin.");
+        // OPEN ANSWER
+        state.openedAnswers.push(idx);
+
+        if (state.activeGroupIndex !== null && state.activeGroupIndex >= 0 && state.activeGroupIndex < 5) {
+          state.scores[state.activeGroupIndex] += answer.points;
+          state.roundPoints = (state.roundPoints || 0) + answer.points;
+        } else {
+          alert("Info: Tidak ada kelompok aktif terpilih. Jawaban dibuka tanpa akumulasi poin.");
+        }
+        playSound('correct');
       }
 
       saveStateAndEmit();
       renderAll();
-      playSound('correct');
     }
 
     function triggerWrong() {

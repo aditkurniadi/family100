@@ -1,81 +1,121 @@
 [
   {
-    "question": "Sebutkan makanan khas Indonesia yang sangat populer!",
+    "category": "UMUM",
+    "question": "Kelakuan apa yang paling sering dilakuin mahasiswa kalau dosen lagi ngejelasin teori yang panjang dan ngebosenin?",
     "answers": [
       {
-        "text": "NASI GORENG",
-        "points": 42
+        "text": "TIDUR / MEREM MELEK",
+        "points": 45
       },
       {
-        "text": "RENDANG",
-        "points": 28
-      },
-      {
-        "text": "SATE",
-        "points": 15
-      },
-      {
-        "text": "BAKSO",
-        "points": 9
-      },
-      {
-        "text": "GADO-GADO",
-        "points": 6
-      }
-    ]
-  },
-  {
-    "question": "Sebutkan perlengkapan sekolah yang wajib dibawa siswa!",
-    "answers": [
-      {
-        "text": "BUKU TULIS",
-        "points": 40
-      },
-      {
-        "text": "PULPEN / PENSIL",
+        "text": "SCROLL TIKTOK / IG DI BAWAH MEJA",
         "points": 30
       },
       {
-        "text": "TAS SEKOLAH",
-        "points": 18
+        "text": "PURA-PURA NGETIK PADAHAL CHATTING",
+        "points": 15
       },
       {
-        "text": "PENGHAPUS",
-        "points": 7
-      },
-      {
-        "text": "PENGGARIS",
-        "points": 5
-      }
-    ]
-  },
-  {
-    "question": "Benda apa di dalam rumah yang sering digunakan untuk bercermin?",
-    "answers": [
-      {
-        "text": "CERMIN / KACA",
-        "points": 85
-      },
-      {
-        "text": "LEMARI ES (PINTU KACA)",
+        "text": "MABAR (MAIN BARENG) DIAM-DIAM",
         "points": 10
-      },
-      {
-        "text": "HP / SCREEN HP",
-        "points": 5
       }
     ]
   },
   {
-    "question": "Sebutkan hewan berkaki empat yang memiliki leher sangat panjang!",
+    "category": "UMUM",
+    "question": "Posisi duduk sebelah mana yang paling jadi rebutan anak kelas pas ujian praktikum?",
     "answers": [
       {
-        "text": "JERAPAH",
-        "points": 95
+        "text": "PALING BELAKANG / POJOKAN",
+        "points": 40
       },
       {
-        "text": "UNTA",
-        "points": 5
+        "text": "DEKAT STOPKONTAK (COLOKAN)",
+        "points": 35
+      },
+      {
+        "text": "SEBELAH ANAK PALING PINTER",
+        "points": 15
+      }
+    ]
+  },
+  {
+    "category": "UMUM",
+    "question": "Apa pertanyaan paling ngeselin dari orang awam pas tahu kita kuliah jurusan Software Engineering?",
+    "answers": [
+      {
+        "text": "BISA HACK IG/WA PACAR NGGAK?",
+        "points": 45
+      },
+      {
+        "text": "\"BISA BENERIN HP/LAPTOP RUSAK?",
+        "points": 30
+      },
+      {
+        "text": "BISA BENERIN PRINTER MACET?",
+        "points": 15
+      },
+      {
+        "text": "ITU JURUSAN APA YA? BEDANYA SAMA TI APA?",
+        "points": 10
+      }
+    ]
+  },
+  {
+    "category": "UMUM",
+    "question": "Fasilitas kampus apa yang paling sering di-roasting atau dikeluhkan sama anak IT pas lagi ngumpul?",
+    "answers": [
+      {
+        "text": "WI-FI KAMPUS YANG LEMOT / SERING PUTUS",
+        "points": 45
+      },
+      {
+        "text": "PC LAB YANG NGE-LAG KALAU BUKA APLIKASI BERA",
+        "points": 30
+      },
+      {
+        "text": "COLOKAN LISTRIK DI KELAS YANG KURANG BANYAK",
+        "points": 15
+      }
+    ]
+  },
+  {
+    "category": "UMUM",
+    "question": "Apa musuh terbesar anak IT pas lagi coding tugas praktikum mepet deadline?",
+    "answers": [
+      {
+        "text": "​ERROR / BUG YANG GAK KETEMU",
+        "points": 45
+      },
+      {
+        "text": "​LAPTOP TIBA-TIBA LAG / NOT RESPONDING",
+        "points": 30
+      },
+      {
+        "text": "​MATI LAMPU / WI-FI TIBA-TIBA PUTUS",
+        "points": 15
+      },
+      {
+        "text": "NGANTUK DAN PENGEN CEPET TIDUR",
+        "points": 10
+      }
+    ]
+  },
+  {
+    "category": "UMUM",
+    "question": "Selain karena belum selesai, apa alasan mahasiswa telat ngumpulin laporan praktikum di web kampus?",
+    "answers": [
+      {
+        "text": "WEB KAMPUS DOWN / CRASH PAS MENIT-MENIT TERAKHIR",
+        "points": 45
+      },
+      {
+        "text": "​LUPA KLIK TOMBOL \"SUBMIT\" (BARU SADAR BESOKNYA)",
+        "points": 30
+      },
+      {
+        "text": "​FILE TUGAS KETUKER ATAU SALAH FORMAT",
+        "points": 15
       }
     ]
   }
